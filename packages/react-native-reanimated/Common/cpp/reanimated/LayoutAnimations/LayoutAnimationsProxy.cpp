@@ -1102,7 +1102,7 @@ void LayoutAnimationsProxy::handleSubtreeRemoval(const std::shared_ptr<LightNode
     const {
   ReanimatedSystraceSection s("handleSubtreeRemoval");
   const bool defersTeardown = holdsSnapshottedScreen(node);
-  bool heldModal = false;
+  [[maybe_unused]] bool heldModal = false;
   if constexpr (StaticFeatureFlags::getFlag("ENABLE_SHARED_ELEMENT_TRANSITIONS")) {
     if (!transaction.surfaceDropped) {
       moveNestedCarriersOutOf(node, transaction);
@@ -1122,6 +1122,7 @@ void LayoutAnimationsProxy::handleSubtreeRemoval(const std::shared_ptr<LightNode
       return;
     }
   }
+#ifdef __APPLE__
   if (heldModal) {
     std::unordered_set<Tag> heldTags;
     collectSubtreeTags(node, heldTags);
@@ -1129,9 +1130,10 @@ void LayoutAnimationsProxy::handleSubtreeRemoval(const std::shared_ptr<LightNode
       layoutAnimationsManager_->clearLayoutAnimationConfig(tag);
     }
     node->setExitingState(COMPLETED);
-    holdModal(node);
+    transaction.modalsToHold.push_back(node);
     return;
   }
+#endif
   const SubtreeRemovalConfig config = {
       .shouldRemoveSubviewsWithoutAnimations = true,
       .shouldAnimate = !transaction.surfaceDropped,
@@ -1178,11 +1180,11 @@ bool LayoutAnimationsProxy::holdsSnapshottedScreen([[maybe_unused]] const std::s
   return false;
 }
 
+#ifdef __APPLE__
 // React Native animates a modal that it removes while presented from a snapshot of what the screen shows, which lags a
 // mount by up to two frames. A modal stays mounted until 34 ms, two frames of a 60 Hz display, after the mount in which
 // a source leaves it or a run that its removal ends stops. Then the snapshot shows the views of the runs as they are on
 // screen.
-#ifdef __APPLE__
 bool LayoutAnimationsProxy::holdsModal(
     const std::shared_ptr<LightNode> &node,
     const std::vector<SharedTransitionRun *> &endedRuns,
@@ -1212,12 +1214,6 @@ std::shared_ptr<LightNode> LayoutAnimationsProxy::modalContentOf(
   return nullptr;
 }
 
-void LayoutAnimationsProxy::holdModal([[maybe_unused]] const std::shared_ptr<LightNode> &node) const {
-#ifdef __APPLE__
-  heldModals_.push_back({node, std::nullopt});
-#endif
-}
-
 bool LayoutAnimationsProxy::isInHeldModal([[maybe_unused]] const std::shared_ptr<LightNode> &node) const {
 #ifdef __APPLE__
   return std::ranges::any_of(heldModals_, [&node](const HeldModal &held) { return isInSubtree(node, held.node); });
@@ -1240,14 +1236,14 @@ void LayoutAnimationsProxy::collectDueRemovals(TransactionMeta &transaction) con
   }
 #ifdef __APPLE__
   const auto now = std::chrono::steady_clock::now();
-  for (auto &held : heldModals_) {
-    held.removableAt = held.removableAt.value_or(now + std::chrono::milliseconds(34));
+  for (auto &node : transaction.modalsToHold) {
+    heldModals_.push_back({std::move(node), now + std::chrono::milliseconds(34)});
   }
   std::erase_if(heldModals_, [&](const HeldModal &held) {
     if (!isLightNodeMapped(held.node)) {
       return true;
     }
-    if (transaction.surfaceDropped || now >= *held.removableAt) {
+    if (transaction.surfaceDropped || now >= held.removableAt) {
       removeCarriersHostedIn(held.node, transaction);
       finishedExits.push_back(held.node);
       return true;
