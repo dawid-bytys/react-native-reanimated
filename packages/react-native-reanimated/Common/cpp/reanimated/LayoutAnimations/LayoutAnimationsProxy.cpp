@@ -1193,7 +1193,7 @@ bool LayoutAnimationsProxy::holdsModal(
     return modalContentOf(view, node) != nullptr;
   };
   return std::ranges::any_of(transaction.startedSources, isInModal) ||
-      std::ranges::any_of(endedRuns, [&](const SharedTransitionRun *run) { return isInModal(run->carrier); });
+      std::ranges::any_of(endedRuns, [&](const SharedTransitionRun *run) { return isInModal(run->target); });
 }
 #endif
 
