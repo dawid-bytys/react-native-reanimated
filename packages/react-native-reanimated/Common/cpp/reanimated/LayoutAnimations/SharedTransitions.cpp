@@ -582,8 +582,7 @@ bool LayoutAnimationsProxy::isLayoutRoot([[maybe_unused]] const std::shared_ptr<
 #endif
 }
 
-// A run moves its carrier in one layout root, so a carrier at the root stays in the layout root of its start. For a
-// carrier at the root, this is the view whose carrier layer mounts it.
+// A run moves its carrier in one layout root, so a carrier at the root stays in the layout root of its start.
 std::shared_ptr<LightNode> LayoutAnimationsProxy::layoutRootOf(const std::shared_ptr<LightNode> &node) const {
   auto current = node;
   while (current->placement() != CarrierPlacement::AT_ROOT) {
@@ -1358,9 +1357,7 @@ void LayoutAnimationsProxy::attachCarrier(
   }
 }
 
-// The runs that move a view of the subtree, or a removed view, to a view of the subtree. A nested carrier ends only
-// with the carrier at the root that holds it. The carriers at the root keep the order in which the host tree draws
-// them.
+// The carriers at the root keep their draw order.
 std::vector<SharedTransitionRun *> LayoutAnimationsProxy::runsEndedBy(const std::shared_ptr<LightNode> &node) const {
   std::vector<SharedTransitionRun *> runs;
   for (const auto &carrier : carrierPlacements_.atRoot()) {
@@ -1380,7 +1377,6 @@ std::vector<SharedTransitionRun *> LayoutAnimationsProxy::runsEndedBy(const std:
   return runs;
 }
 
-// A held modal leaves with the views of these runs as they are on screen.
 void LayoutAnimationsProxy::stopSharedTransitions(
     const std::vector<SharedTransitionRun *> &runs,
     const std::shared_ptr<LightNode> &node,
@@ -1398,8 +1394,7 @@ void LayoutAnimationsProxy::stopSharedTransitions(
   }
 }
 
-// The carrier keeps what it shows and moves from the layer in the window to a carrier layer of the modal. A nested
-// carrier moves with the carrier that holds it.
+// A nested carrier moves with the carrier that holds it.
 void LayoutAnimationsProxy::moveCarrierIntoModal(
     SharedTransitionRun &run,
     const std::shared_ptr<LightNode> &modalContent,
@@ -1434,7 +1429,7 @@ void LayoutAnimationsProxy::moveCarrierIntoModal(
   cancelLayoutAnimation(node->current.tag);
 }
 
-// UIKit can show the view outside the view of its React parent, for example in a presented modal.
+// UIKit can show a view outside its React parent, for example in a presented modal.
 react::Point LayoutAnimationsProxy::nativeOriginOnScreen(const std::shared_ptr<LightNode> &node) const {
   auto ancestors = collectAncestors(node, true);
   auto positions = getAbsolutePositionsForRootPathView(node, true);
@@ -2796,7 +2791,7 @@ void LayoutAnimationsProxy::applyContentOpacity(
   };
 }
 
-// A retiring run keeps the fade of its children until its carrier attaches. A stopped run leaves them as they are.
+// A retiring run keeps the fade of its children until its carrier attaches.
 std::vector<SharedTransitionRun *> LayoutAnimationsProxy::contentFadeRuns() const {
   std::vector<SharedTransitionRun *> runs;
   for (auto &[_, run] : sharedTransitionRuns_) {
