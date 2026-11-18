@@ -96,6 +96,8 @@ class RuntimeTestObserverModule(context: ReactApplicationContext) : NativeRuntim
     promise.resolve(null)
   }
 
+  override fun updateFrameRecordingTags(tags: ReadableArray) {}
+
   override fun takeFrameRecording(promise: Promise) {
     promise.resolve(null)
   }
